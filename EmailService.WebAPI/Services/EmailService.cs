@@ -18,21 +18,26 @@ namespace EmailService.WebAPI.Services
 
         public async Task<bool> SendEmail(EmailModel emailModel)
         {
+            var smtpHost = _configuration.GetSection("Host").Value;
+            var emailAddress = _configuration.GetSection("EmailAddress").Value;
+            var emailPassword = _configuration.GetSection("EmailPassword").Value;
+            var port = Convert.ToInt32(_configuration.GetSection("Port").Value);
+
             try
             {
                 var email = new MimeMessage();
-                email.From.Add(MailboxAddress.Parse(_configuration.GetSection("EmailAddress").Value));
+                email.From.Add(MailboxAddress.Parse(emailAddress));
                 email.To.Add(MailboxAddress.Parse(emailModel.ToEmail));
                 email.Subject = emailModel.Subject;
-                email.Body = new TextPart(TextFormat.Html)
+                email.Body = new TextPart(TextFormat.Plain)
                 {
                     Text = emailModel.Body
                 };
 
                 using (var client = new SmtpClient())
                 {
-                    await client.ConnectAsync(_configuration.GetSection("SmtpServer").Value, 587, SecureSocketOptions.StartTls);
-                    await client.AuthenticateAsync(_configuration.GetSection("EmailAddress").Value, _configuration.GetSection("EmailPassword").Value);
+                    await client.ConnectAsync(smtpHost, port, SecureSocketOptions.StartTls);
+                    await client.AuthenticateAsync(emailAddress, emailPassword);
                     await client.SendAsync(email);
                     await client.DisconnectAsync(true);
                 }
